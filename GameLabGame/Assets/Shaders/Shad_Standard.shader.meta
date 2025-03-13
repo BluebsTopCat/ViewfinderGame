@@ -2,7 +2,9 @@ fileFormatVersion: 2
 guid: e910207276a20b14eac36d99fd404729
 ShaderImporter:
   externalObjects: {}
-  defaultTextures: []
+  defaultTextures:
+  - GrungeGlobal: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
+  - _TopTexture1: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
   nonModifiableTextures: []
   userData: 
   assetBundleName: 

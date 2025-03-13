@@ -24,7 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _Albedo:
-        m_Texture: {fileID: 2800000, guid: fdbd6bef6b754fd45b186f85c2c9bbfb, type: 3}
+        m_Texture: {fileID: 2800000, guid: 936e8b8dee7e57848984735148bd7a02, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseMap:
@@ -88,6 +88,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Texture0:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TextureSample0:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -158,7 +162,7 @@ Material:
     - _SrcBlendAlpha: 1
     - _StepGradient: 0.01
     - _Surface: 0
-    - _TransparencyCutoff: 0.09799726
+    - _TransparencyCutoff: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
@@ -170,8 +174,9 @@ Material:
     - _NoiseColor2: {r: 0.8915094, g: 0.99607867, b: 1, a: 0}
     - _Shadow: {r: 0.06274508, g: 0.44348618, b: 0.5372549, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Tint: {r: 1, g: 1, b: 1, a: 0}
+    - _Tint: {r: 0.44313726, g: 0.090196066, b: 0.14612603, a: 0}
     - _VTInfoBlock: {r: 0, g: 0, b: 0, a: 0}
+    - _Variation: {r: 0.23, g: 0.5, b: 0, a: 0}
     - _WindDirection: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &8953918266419800834

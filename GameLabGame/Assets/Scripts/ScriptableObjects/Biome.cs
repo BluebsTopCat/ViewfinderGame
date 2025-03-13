@@ -9,8 +9,8 @@ using Random = UnityEngine.Random;
 public class PlantWeightPair
 {
     public FolliageType Plant;
-    [Range(1,10)]
-    public int Weight;
+    [Range(0,10)]
+    public float Weight;
 
     public PlantWeightPair(FolliageType plant, int weight)
     {
@@ -18,23 +18,12 @@ public class PlantWeightPair
         this.Weight = weight;
     }
 
-    public GameObject getMesh()
-    {
-        GameObject plant = Plant.meshVariants[Random.Range(0, Plant.meshVariants.Length)];
-        return plant;
-    }
-
-    public float getSize()
-    {
-        float size = Random.Range(Plant.scaleVariation.x, Plant.scaleVariation.y);
-        return (size);
-    }
-
-    public Quaternion getRot()
-    {
-        Vector3 rot = new Vector3(0f, Random.Range(0, 360), 0f);
-        return Quaternion.Euler(rot);
-    }
+    public bool ignoreChunking => Plant.ignoreChunking;
+    public float GetCrowdDist => Plant.crowding;
+    public GameObject GetGameObject => Plant.meshVariants[Random.Range(0, Plant.meshVariants.Length)];
+    public float GetScale => Random.Range(Plant.scaleVariation.x, Plant.scaleVariation.y);
+    public Quaternion GetRotation =>  Quaternion.Euler(new Vector3(0f, Random.Range(0, 360), 0f)); 
+    
 }
 
 

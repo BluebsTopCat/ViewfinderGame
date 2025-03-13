@@ -56,6 +56,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Emission:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _EmissionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -69,6 +73,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Normal:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -89,7 +97,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Texture:
-        m_Texture: {fileID: 2800000, guid: 414299fc426a56846b475e9bfabdb512, type: 3}
+        m_Texture: {fileID: 2800000, guid: b4d90923b71a43f41a1bce81184b9753, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _TextureSample0:
@@ -130,8 +138,9 @@ Material:
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
     - _FSmoothTint: 0.5
-    - _FogDesnity: 0
-    - _FogOffset: 0.5
+    - _Float0: 1000
+    - _FogDesnity: 3
+    - _FogOffset: 0
     - _Fresnel: 0
     - _FresnelSmoothness: 0.5
     - _GlossMapScale: 0
@@ -140,6 +149,7 @@ Material:
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
+    - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SecondaryLightIntensity: 0.541
@@ -163,6 +173,7 @@ Material:
     - _Color: {r: 0, g: 0.6226415, b: 0.20193781, a: 1}
     - _Color0: {r: 0.17621931, g: 0.2526284, b: 0.6792453, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Sky_Bot: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _Specular: {r: 1, g: 1, b: 1, a: 1}
     - _Tint: {r: 1, g: 1, b: 1, a: 0}

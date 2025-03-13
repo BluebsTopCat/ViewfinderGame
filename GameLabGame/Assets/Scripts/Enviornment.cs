@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using UnityEngine;
-using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 
@@ -17,7 +16,7 @@ public class Enviornment : MonoBehaviour
     public float cloudColorStr = 0.446f;
 
     [FormerlySerializedAs("CloudSpeedMult")] public float cloudSpeedMult = .05f;
-
+    public Texture2D grungeglobal;
     public Vector3 windSpeed;
     Vector2 _cloudAcc;
     Vector2 _cloudPos;
@@ -28,11 +27,14 @@ public class Enviornment : MonoBehaviour
     [FormerlySerializedAs("Cloud_Color")] public Color cloudColor;
     [FormerlySerializedAs("LowGrad")] public Gradient lowGrad;
     [FormerlySerializedAs("HighGrad")] public Gradient highGrad;
+    public AnimationCurve sunbrightness = new AnimationCurve();
     
     // Start is called before the first frame update
 
     private void OnValidate()
     {
+    
+        Shader.SetGlobalTexture("GrungeGlobal", grungeglobal);
         UpdateShaders();
     }
 
@@ -47,6 +49,8 @@ public class Enviornment : MonoBehaviour
         
         Color skyTop = highGrad.Evaluate(standardTime/ 24);
         
+        Color skyBot = lowGrad.Evaluate(standardTime/ 24);
+        
         Shader.SetGlobalColor("Sky_Top", skyTop);
         Shader.SetGlobalColor("Sky_Bot", lowGrad.Evaluate(standardTime/24));
         Shader.SetGlobalFloat("Time", standardTime);
@@ -55,9 +59,11 @@ public class Enviornment : MonoBehaviour
         Shader.SetGlobalColor("CloudColor", cloudColor);
         Shader.SetGlobalVector("CloudPos", _cloudPos);
         Shader.SetGlobalVector("WindDir", windSpeed);
+        RenderSettings.fogColor = Color.Lerp(skyTop, skyBot, .5f);
         sun.color = skyTop;
         float sunRot = -90 + 360 * (standardTime / 24);
         sun.transform.eulerAngles = new Vector3(sunRot, 0f, 0f);
+        sun.intensity = sunbrightness.Evaluate(standardTime / 24);
     }
 
     void UpdateSkyBox()

@@ -152,10 +152,14 @@ namespace AmplifyShaderEditor
 		private Dictionary<string, int> m_virtualCoordinatesDict;
 		private Dictionary<string, string> m_virtualVariablesDict;
 		private Dictionary<string, PropertyDataCollector> m_localVariablesDict;
+		private Dictionary<string, PropertyDataCollector> m_localVariablesByNameDict;
 		private Dictionary<string, PropertyDataCollector> m_vertexLocalVariablesDict;
+		private Dictionary<string, PropertyDataCollector> m_vertexLocalVariablesByNameDict;
 		private Dictionary<string, PropertyDataCollector> m_specialLocalVariablesDict;
+		private Dictionary<string, PropertyDataCollector> m_specialLocalVariablesByNameDict;
 		private Dictionary<string, PropertyDataCollector> m_vertexDataDict;
 		private Dictionary<string, PropertyDataCollector> m_customOutputDict;
+		private Dictionary<string, PropertyDataCollector> m_customOutputByNameDict;
 		private Dictionary<string, string> m_localFunctions;
 		private Dictionary<string, string> m_grabPassDict;
 		private Dictionary<string, string> m_usePassesDict;
@@ -317,12 +321,16 @@ namespace AmplifyShaderEditor
 			m_definesDict = new Dictionary<string, PropertyDataCollector>();
 			m_virtualCoordinatesDict = new Dictionary<string, int>();
 			m_localVariablesDict = new Dictionary<string, PropertyDataCollector>();
+			m_localVariablesByNameDict = new Dictionary<string, PropertyDataCollector>();
 			m_virtualVariablesDict = new Dictionary<string, string>();
 			m_specialLocalVariablesDict = new Dictionary<string, PropertyDataCollector>();
+			m_specialLocalVariablesByNameDict = new Dictionary<string, PropertyDataCollector>();
 			m_vertexLocalVariablesDict = new Dictionary<string, PropertyDataCollector>();
+			m_vertexLocalVariablesByNameDict = new Dictionary<string, PropertyDataCollector>();
 			m_localFunctions = new Dictionary<string, string>();
 			m_vertexDataDict = new Dictionary<string, PropertyDataCollector>();
 			m_customOutputDict = new Dictionary<string, PropertyDataCollector>();
+			m_customOutputByNameDict = new Dictionary<string, PropertyDataCollector>();
 			m_grabPassDict = new Dictionary<string, string>();
 			m_usePassesDict = new Dictionary<string, string>();
 
@@ -463,6 +471,18 @@ namespace AmplifyShaderEditor
 			m_vertexData += "\t\t\t" + Constants.VertexShaderInputStr + ".normal = " + value + ";\n";
 		}
 
+		public void AddToVertexTangent( string value )
+		{
+			if ( string.IsNullOrEmpty( value ) )
+				return;
+
+			if ( !m_dirtyPerVertexData )
+			{
+				OpenPerVertexHeader( true );
+			}
+
+			m_vertexData += "\t\t\t" + Constants.VertexShaderInputStr + ".tangent = " + value + ";\n";
+		}
 
 		public void AddVertexInstruction( string value, int nodeId = -1, bool addDelimiters = true )
 		{
@@ -796,7 +816,7 @@ namespace AmplifyShaderEditor
 			if( list[ list.Count - 1 ].PropertyName.Contains( "[Header(" ) )
 			{
 				//Check if this is a complete property or just a standalone header
-				Match match = Regex.Match( list[ list.Count - 1 ].PropertyName, TemplateHelperFunctions.PropertiesPatternG );
+				Match match = Regex.Match( list[ list.Count - 1 ].PropertyName, TemplateHelperFunctions.PropertiesPatternI );
 				if( !match.Success )
 				{
 					list.RemoveAt( list.Count - 1 );
@@ -946,13 +966,6 @@ namespace AmplifyShaderEditor
 				m_dirtyUniforms = true;
 			}
 		}
-		public void AddFaceMacros()
-		{
-			for( int i = 0 ; i < Constants.FaceMacros.Length; i++ )
-			{
-				AddToDirectives( Constants.FaceMacros[ i ] );
-			}
-		}
 
 		public void AddASEMacros()
 		{
@@ -960,12 +973,6 @@ namespace AmplifyShaderEditor
 				return;
 
 			ParentGraph outsideGraph = UIUtils.CurrentWindow.OutsideGraph;
-#if !UNITY_2018_1_OR_NEWER
-			if( outsideGraph.IsStandardSurface && ( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO || ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD ) )
-			{
-				return;
-			}
-#endif
 
 			//Debug.Log( UsingMacrosMask );
 			AddToDirectives( Constants.CustomASEStandarSamplingMacrosHelper[ 0 ], 1 );
@@ -997,30 +1004,14 @@ namespace AmplifyShaderEditor
 			if( ( UsingCUBEMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
 				AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 11 ], 1 );
 
-#if !UNITY_2018_1_OR_NEWER
-			if( outsideGraph.IsStandardSurface )
-			{
-				//if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
-				//	AddToDirectives( Constants.CustomASEArraySamplingMacrosRecent[ 0 ], 1 );
-				//if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
-				//	AddToDirectives( Constants.CustomASEArraySamplingMacrosRecent[ 1 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
-					AddToDirectives( Constants.CustomASEArraySamplingMacrosRecent[ 2 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
-					AddToDirectives( Constants.CustomASEArraySamplingMacrosRecent[ 3 ], 1 );
-			} 
-			else
-#endif
-			{
-				if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 12 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 13 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 14 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 15 ], 1 );
-			}
+			if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 12 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 13 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 14 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosRecent[ 15 ], 1 );
 
 			AddToDirectives( Constants.CustomASEStandarSamplingMacrosHelper[ 1 ], 1 );
 
@@ -1051,30 +1042,14 @@ namespace AmplifyShaderEditor
 			if( ( UsingCUBEMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
 				AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 11 ], 1 );
 
-#if !UNITY_2018_1_OR_NEWER
-			if( outsideGraph.IsStandardSurface )
-			{
-				//if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
-				//	AddToDirectives( Constants.CustomASEArraySamplingMacrosOlder[ 0 ], 1 );
-				//if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
-				//	AddToDirectives( Constants.CustomASEArraySamplingMacrosOlder[ 1 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
-					AddToDirectives( Constants.CustomASEArraySamplingMacrosOlder[ 2 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
-					AddToDirectives( Constants.CustomASEArraySamplingMacrosOlder[ 3 ], 1 );
-			}
-			else
-#endif
-			{
-				if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 12 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 13 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 14 ], 1 );
-				if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
-					AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 15 ], 1 );
-			}
+			if( ( Using2DArrayMacrosMask & MacrosMask.AUTO ) == MacrosMask.AUTO )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 12 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.LOD ) == MacrosMask.LOD )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 13 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.BIAS ) == MacrosMask.BIAS )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 14 ], 1 );
+			if( ( Using2DArrayMacrosMask & MacrosMask.GRAD ) == MacrosMask.GRAD )
+				AddToDirectives( Constants.CustomASEStandarSamplingMacrosOlder[ 15 ], 1 );
 
 			AddToDirectives( Constants.CustomASEStandarSamplingMacrosHelper[ 2 ], 1 );
 		}
@@ -1256,7 +1231,7 @@ namespace AmplifyShaderEditor
 				return false;
 
 			string value = UIUtils.PrecisionWirePortToCgType( precisionType, type ) + " " + varName + " = " + varValue + ";";
-			return AddToLocalVariables( category, nodeId, value );
+			return AddToLocalVariables( category, nodeId, value, varName: varName );
 		}
 
 		public bool AddToLocalVariables( int nodeId, PrecisionType precisionType, WirePortDataType type, string varName, string varValue )
@@ -1265,10 +1240,10 @@ namespace AmplifyShaderEditor
 				return false;
 
 			string value = UIUtils.PrecisionWirePortToCgType( precisionType, type ) + " " + varName + " = " + varValue + ";";
-			return AddToFragmentLocalVariables( nodeId, value );
+			return AddToFragmentLocalVariables( nodeId, value, varName: varName );
 		}
 
-		public bool AddToLocalVariables( MasterNodePortCategory category, int nodeId, string value, bool ignoreDuplicates = false )
+		public bool AddToLocalVariables( MasterNodePortCategory category, int nodeId, string value, bool ignoreDuplicates = false, string varName = "" )
 		{
 			if( string.IsNullOrEmpty( value ) )
 				return false;
@@ -1278,12 +1253,12 @@ namespace AmplifyShaderEditor
 				case MasterNodePortCategory.Vertex:
 				case MasterNodePortCategory.Tessellation:
 				{
-					return AddToVertexLocalVariables( nodeId, value, ignoreDuplicates );
+					return AddToVertexLocalVariables( nodeId, value, ignoreDuplicates, varName );
 				}
 				case MasterNodePortCategory.Fragment:
 				case MasterNodePortCategory.Debug:
 				{
-					return AddToFragmentLocalVariables( nodeId, value, ignoreDuplicates );
+					return AddToFragmentLocalVariables( nodeId, value, ignoreDuplicates, varName );
 				}
 			}
 
@@ -1296,43 +1271,7 @@ namespace AmplifyShaderEditor
 				return false;
 
 			string value = customType + " " + varName + " = " + varValue + ";";
-			return AddLocalVariable( nodeId, value );
-		}
-
-		private bool UsedLocalVariable( string value )
-		{
-			switch( m_portCategory )
-			{
-				case MasterNodePortCategory.Vertex:
-				case MasterNodePortCategory.Tessellation:
-				{
-					if( m_vertexLocalVariablesDict.ContainsKey( value ) )
-					{
-						return true;
-					}
-				}
-				break;
-				case MasterNodePortCategory.Fragment:
-				case MasterNodePortCategory.Debug:
-				{
-					if( m_usingCustomOutput )
-					{
-						if( m_customOutputDict.ContainsKey( value ) )
-						{
-							return true;
-						}
-					}
-					else
-					{
-						if( m_localVariablesDict.ContainsKey( value ) )
-						{
-							return true;
-						}
-					}
-				}
-				break;
-			}
-			return false;
+			return AddLocalVariable( nodeId, value, varName: varName );
 		}
 
 		private bool ValidadeLocalVariable( PrecisionType precisionType, WirePortDataType type, string varName, string varValue, ref string result )
@@ -1341,7 +1280,7 @@ namespace AmplifyShaderEditor
 			foreach( PrecisionType currPrecision in enumValues)
 			{
 				string value = UIUtils.PrecisionWirePortToTypeValue( currPrecision, type, varName ) + " = " + varValue + ";";
-				if( UsedLocalVariable( value ) )
+				if( HasLocalVariable( value ) )
 					return false;
 
 				if( precisionType == currPrecision )
@@ -1353,39 +1292,43 @@ namespace AmplifyShaderEditor
 
 		public bool AddLocalVariable( int nodeId, PrecisionType precisionType, WirePortDataType type, string varName, string varValue )
 		{
-			if( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
+			if ( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
+			{
 				return false;
+			}
 
-			//string value = UIUtils.PrecisionWirePortToTypeValue( precisionType, type, varName ) + " = " + varValue + ";";
 			string value = string.Empty;
-			if( ValidadeLocalVariable(  precisionType, type, varName, varValue, ref value))
-				return AddLocalVariable( nodeId, value );
-
+			if ( ValidadeLocalVariable( precisionType, type, varName, varValue, ref value ) )
+			{
+				return AddLocalVariable( nodeId, value, varName: varName );
+			}
 			return false;
 		}
 
-		public bool AddLocalVariable( int nodeId, string name, string value, bool ignoreDuplicates = false , bool addSemiColon = false )
+		public bool AddLocalVariable( int nodeId, string varName, string varValue, bool ignoreDuplicates = false, bool addSemiColon = false )
 		{
-			string finalValue = addSemiColon ? name + " = " + value + ";" : name + " = " + value;
-			return AddLocalVariable( nodeId, finalValue, ignoreDuplicates );
+			string finalValue = addSemiColon ? varName + " = " + varValue + ";" : varName + " = " + varValue;
+			return AddLocalVariable( nodeId, finalValue, ignoreDuplicates, varName: varName );
 		}
 
-		public bool AddLocalVariable( int nodeId, string value, bool ignoreDuplicates = false )
+		public bool AddLocalVariable( int nodeId, string value, bool ignoreDuplicates = false, string varName = "" )
 		{
-			if( string.IsNullOrEmpty( value ) )
+			if ( string.IsNullOrEmpty( value ) )
+			{
 				return false;
+			}
 
-			switch( m_portCategory )
+			switch ( m_portCategory )
 			{
 				case MasterNodePortCategory.Vertex:
 				case MasterNodePortCategory.Tessellation:
 				{
-					return AddToVertexLocalVariables( nodeId, value, ignoreDuplicates );
+					return AddToVertexLocalVariables( nodeId, value, ignoreDuplicates, varName );
 				}
 				case MasterNodePortCategory.Fragment:
 				case MasterNodePortCategory.Debug:
 				{
-					return AddToFragmentLocalVariables( nodeId, value, ignoreDuplicates );
+					return AddToFragmentLocalVariables( nodeId, value, ignoreDuplicates, varName );
 				}
 			}
 
@@ -1399,16 +1342,6 @@ namespace AmplifyShaderEditor
 
 			string result = string.Empty;
 
-			//switch ( m_portCategory )
-			//{
-			//case MasterNodePortCategory.Vertex:
-			//case MasterNodePortCategory.Tessellation:
-			//{
-			//}
-			//break;
-			//case MasterNodePortCategory.Fragment:
-			//case MasterNodePortCategory.Debug:
-			//{
 			if( !m_virtualVariablesDict.ContainsKey( value ) )
 			{
 				m_virtualVariablesDict.Add( value, variable );
@@ -1418,10 +1351,6 @@ namespace AmplifyShaderEditor
 			{
 				m_virtualVariablesDict.TryGetValue( value, out result );
 			}
-			//}
-			//break;
-			//}
-
 			return result;
 		}
 
@@ -1439,7 +1368,12 @@ namespace AmplifyShaderEditor
 
 		public bool HasLocalVariable( string value )
 		{
-			switch( m_portCategory )
+			return HasLocalVariable( value, m_portCategory );
+		}
+
+		public bool HasLocalVariable( string value, MasterNodePortCategory category )
+		{
+			switch( category )
 			{
 				case MasterNodePortCategory.Vertex:
 				case MasterNodePortCategory.Tessellation:
@@ -1462,17 +1396,57 @@ namespace AmplifyShaderEditor
 			return false;
 		}
 
-		public bool AddToFragmentLocalVariables( int nodeId, string value, bool ignoreDuplicates = false )
+		public bool HasLocalVariableByName( string varName )
 		{
-			if( string.IsNullOrEmpty( value ) )
-				return false;
+			return HasLocalVariableByName( varName, m_portCategory );
+		}
 
-			if( m_usingCustomOutput )
+		public bool HasLocalVariableByName( string varName, MasterNodePortCategory category )
+		{
+			switch ( category )
 			{
-				if( !m_customOutputDict.ContainsKey( value ) || ignoreDuplicates )
+				case MasterNodePortCategory.Vertex:
+				case MasterNodePortCategory.Tessellation:
 				{
-					if( !m_customOutputDict.ContainsKey( value ) )
-						m_customOutputDict.Add( value, new PropertyDataCollector( nodeId, value ) );
+					return m_vertexLocalVariablesByNameDict.ContainsKey( varName );
+				}
+				case MasterNodePortCategory.Fragment:
+				case MasterNodePortCategory.Debug:
+				{
+					if ( m_usingCustomOutput )
+					{
+						return m_customOutputByNameDict.ContainsKey( varName );
+					}
+					else
+					{
+						return m_localVariablesByNameDict.ContainsKey( varName );
+					}
+				}
+			}
+			return false;
+		}
+
+		public bool AddToFragmentLocalVariables( int nodeId, string value, bool ignoreDuplicates = false, string varName = "" )
+		{
+			if ( string.IsNullOrEmpty( value ) )
+			{
+				return false;
+			}
+
+			if ( m_usingCustomOutput )
+			{
+				if ( !m_customOutputDict.ContainsKey( value ) || ignoreDuplicates )
+				{
+					if ( !m_customOutputDict.TryGetValue( value, out PropertyDataCollector property ) )
+					{
+						property = new PropertyDataCollector( nodeId, value );
+						m_customOutputDict.Add( value, property );
+					}
+
+					if ( !string.IsNullOrEmpty( varName ) && !m_customOutputByNameDict.ContainsKey( varName ) )
+					{
+						m_customOutputByNameDict.Add( varName, property );
+					}
 
 					m_customOutputList.Add( m_customOutputDict[ value ] );
 					m_customOutput += "\t\t\t" + value + '\n';
@@ -1480,15 +1454,23 @@ namespace AmplifyShaderEditor
 				}
 				else
 				{
-					if( m_showDebugMessages ) UIUtils.ShowMessage( "AddToLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
+					if ( m_showDebugMessages ) UIUtils.ShowMessage( "AddToLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
 				}
 			}
 			else
 			{
-				if( !m_localVariablesDict.ContainsKey( value ) || ignoreDuplicates )
+				if ( !m_localVariablesDict.ContainsKey( value ) || ignoreDuplicates )
 				{
-					if( !m_localVariablesDict.ContainsKey( value ) )
-						m_localVariablesDict.Add( value, new PropertyDataCollector( nodeId, value ) );
+					if ( !m_localVariablesDict.TryGetValue( value, out PropertyDataCollector property ) )
+					{
+						property = new PropertyDataCollector( nodeId, value );
+						m_localVariablesDict.Add( value, property );
+					}
+
+					if ( !string.IsNullOrEmpty( varName ) && !m_localVariablesByNameDict.ContainsKey( varName ) )
+					{
+						m_localVariablesByNameDict.Add( varName, property );
+					}
 
 					m_localVariablesList.Add( m_localVariablesDict[ value ] );
 					AddToSpecialLocalVariables( nodeId, value, ignoreDuplicates );
@@ -1496,23 +1478,31 @@ namespace AmplifyShaderEditor
 				}
 				else
 				{
-					if( m_showDebugMessages ) UIUtils.ShowMessage( "AddToLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
+					if ( m_showDebugMessages ) UIUtils.ShowMessage( "AddToLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
 				}
 			}
 			return false;
 		}
 
-		public void AddToSpecialLocalVariables( int nodeId, string value, bool ignoreDuplicates = false )
+		public void AddToSpecialLocalVariables( int nodeId, string value, bool ignoreDuplicates = false, string varName = "" )
 		{
-			if( string.IsNullOrEmpty( value ) )
+			if ( string.IsNullOrEmpty( value ) )
 				return;
 
-			if( m_usingCustomOutput )
+			if ( m_usingCustomOutput )
 			{
-				if( !m_customOutputDict.ContainsKey( value ) || ignoreDuplicates )
+				if ( !m_customOutputDict.ContainsKey( value ) || ignoreDuplicates )
 				{
-					if( !m_customOutputDict.ContainsKey( value ) )
-						m_customOutputDict.Add( value, new PropertyDataCollector( nodeId, value ) );
+					if ( !m_customOutputDict.TryGetValue( value, out PropertyDataCollector property ) )
+					{
+						property = new PropertyDataCollector( nodeId, value );
+						m_customOutputDict.Add( value, property );
+					}
+
+					if ( !string.IsNullOrEmpty( varName ) && !m_customOutputByNameDict.ContainsKey( varName ) )
+					{
+						m_customOutputByNameDict.Add( varName, property );
+					}
 
 					m_customOutputList.Add( m_customOutputDict[ value ] );
 					m_customOutput += "\t\t\t" + value + '\n';
@@ -1520,15 +1510,23 @@ namespace AmplifyShaderEditor
 				}
 				else
 				{
-					if( m_showDebugMessages ) UIUtils.ShowMessage( "AddToSpecialLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
+					if ( m_showDebugMessages ) UIUtils.ShowMessage( "AddToSpecialLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
 				}
 			}
 			else
 			{
-				if( !m_specialLocalVariablesDict.ContainsKey( value ) || ignoreDuplicates )
+				if ( !m_specialLocalVariablesDict.ContainsKey( value ) || ignoreDuplicates )
 				{
-					if( !m_specialLocalVariablesDict.ContainsKey( value ) )
-						m_specialLocalVariablesDict.Add( value, new PropertyDataCollector( nodeId, value ) );
+					if ( !m_specialLocalVariablesDict.TryGetValue( value, out PropertyDataCollector property ) )
+					{
+						property = new PropertyDataCollector( nodeId, value );
+						m_specialLocalVariablesDict.Add( value, property );
+					}
+
+					if ( !string.IsNullOrEmpty( varName ) && !m_specialLocalVariablesByNameDict.ContainsKey( varName ) )
+					{
+						m_specialLocalVariablesByNameDict.Add( value, property );
+					}
 
 					m_specialLocalVariablesList.Add( m_specialLocalVariablesDict[ value ] );
 					m_specialLocalVariables += "\t\t\t" + value + '\n';
@@ -1536,7 +1534,7 @@ namespace AmplifyShaderEditor
 				}
 				else
 				{
-					if( m_showDebugMessages ) UIUtils.ShowMessage( "AddToSpecialLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
+					if ( m_showDebugMessages ) UIUtils.ShowMessage( "AddToSpecialLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
 				}
 			}
 		}
@@ -1550,31 +1548,39 @@ namespace AmplifyShaderEditor
 
 		public bool AddToVertexLocalVariables( int nodeId, string varName, string varValue )
 		{
-			if( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
+			if ( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
 				return false;
 
 			string value = varName + " = " + varValue + ";";
-			return AddToVertexLocalVariables( nodeId, value );
+			return AddToVertexLocalVariables( nodeId, value, varName: varName );
 		}
 
 		public bool AddToVertexLocalVariables( int nodeId, PrecisionType precisionType, WirePortDataType type, string varName, string varValue )
 		{
-			if( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
+			if ( string.IsNullOrEmpty( varName ) || string.IsNullOrEmpty( varValue ) )
 				return false;
 
 			string value = UIUtils.PrecisionWirePortToCgType( precisionType, type ) + " " + varName + " = " + varValue + ";";
-			return AddToVertexLocalVariables( nodeId, value );
+			return AddToVertexLocalVariables( nodeId, value, varName: varName );
 		}
 
-		public bool AddToVertexLocalVariables( int nodeId, string value, bool ignoreDuplicates = false )
+		public bool AddToVertexLocalVariables( int nodeId, string value, bool ignoreDuplicates = false, string varName = "" )
 		{
-			if( string.IsNullOrEmpty( value ) )
+			if ( string.IsNullOrEmpty( value ) )
 				return false;
 
-			if( !m_vertexLocalVariablesDict.ContainsKey( value ) || ignoreDuplicates )
+			if ( !m_vertexLocalVariablesDict.ContainsKey( value ) || ignoreDuplicates )
 			{
-				if( !m_vertexLocalVariablesDict.ContainsKey( value ) )
-					m_vertexLocalVariablesDict.Add( value, new PropertyDataCollector( nodeId, value ) );
+				if ( !m_vertexLocalVariablesDict.TryGetValue( value, out PropertyDataCollector property ) )
+				{
+					property = new PropertyDataCollector( nodeId, value );
+					m_vertexLocalVariablesDict.Add( value, property  );
+				}
+
+				if ( !string.IsNullOrEmpty( varName ) && !m_vertexLocalVariablesByNameDict.ContainsKey( value ) )
+				{
+					m_vertexLocalVariablesByNameDict.Add( value, property );
+				}
 
 				m_vertexLocalVariablesList.Add( m_vertexLocalVariablesDict[ value ] );
 				m_vertexLocalVariables += "\t\t\t" + value + '\n';
@@ -1583,7 +1589,7 @@ namespace AmplifyShaderEditor
 			}
 			else
 			{
-				if( m_showDebugMessages ) UIUtils.ShowMessage( "AddToVertexLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
+				if ( m_showDebugMessages ) UIUtils.ShowMessage( "AddToVertexLocalVariables:Attempting to add duplicate " + value, MessageSeverity.Warning );
 			}
 
 			return false;
@@ -1820,7 +1826,13 @@ namespace AmplifyShaderEditor
 			get
 			{
 				if( m_dirtyPerVertexData )
+				{
 					return Constants.CustomAppDataFullBody + m_customAppDataItems + "\t\t};\n";
+				}
+				else if ( m_dirtyAppData )
+				{
+					return Constants.CustomAppDataFullBody + "\t\t};\n";
+				}
 
 				return string.Empty;
 			}
@@ -1955,11 +1967,20 @@ namespace AmplifyShaderEditor
 			m_localVariablesDict.Clear();
 			m_localVariablesDict = null;
 
+			m_localVariablesByNameDict.Clear();
+			m_localVariablesByNameDict = null;
+
 			m_specialLocalVariablesDict.Clear();
 			m_specialLocalVariablesDict = null;
 
+			m_specialLocalVariablesByNameDict.Clear();
+			m_specialLocalVariablesByNameDict = null;
+
 			m_vertexLocalVariablesDict.Clear();
 			m_vertexLocalVariablesDict = null;
+
+			m_vertexLocalVariablesByNameDict.Clear();
+			m_vertexLocalVariablesByNameDict = null;
 
 			m_localFunctions.Clear();
 			m_localFunctions = null;
@@ -1969,6 +1990,9 @@ namespace AmplifyShaderEditor
 
 			m_customOutputDict.Clear();
 			m_customOutputDict = null;
+
+			m_customOutputByNameDict.Clear();
+			m_customOutputByNameDict = null;
 
 			//templates
 			m_vertexInputList.Clear();
@@ -2086,12 +2110,21 @@ namespace AmplifyShaderEditor
 
 		public bool IsTemplate { get { return m_masterNodeCategory == AvailableShaderTypes.Template; } }
 
-		public bool IsSRP { get { return ( TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.Lightweight || TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HD ); } }
+		public bool IsSRP { get { return ( TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.URP || TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HDRP ); } }
 
 		public AvailableShaderTypes MasterNodeCategory
 		{
 			get { return m_masterNodeCategory; }
 			set { m_masterNodeCategory = value; }
+		}
+
+		public string CurrentPassName
+		{ 
+			get 
+			{
+				var multiPassMasterNode = m_masterNode as TemplateMultiPassMasterNode;
+				return ( multiPassMasterNode != null ) ? multiPassMasterNode.PassName : string.Empty;
+			}
 		}
 
 		/// <summary>
@@ -2342,7 +2375,7 @@ namespace AmplifyShaderEditor
 				if( IsTemplate )
 					return m_templateDataCollector.CurrentSRPType;
 
-				return TemplateSRPType.BuiltIn;
+				return TemplateSRPType.BiRP;
 			}
 		}
 

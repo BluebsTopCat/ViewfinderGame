@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -8,89 +9,105 @@ using Random = UnityEngine.Random;
 public class PlantArea : MonoBehaviour
 {
     public Biome b;
-
-    public float radius;
-
+    public float maxsteepness = .75f;
     public float density;
-    
-
     public LayerMask validplacement;
 
-    private List<GameObject> plants;
-
-    [InspectorButton("Generate")] public bool generate;
-
+    [InspectorButton("Delete")] public bool delete;
     // Start is called before the first frame update
+    
+
+    private void Delete()
+    {
+        delete = false;
+        while(transform.childCount > 1)
+        {
+            DestroyImmediate(transform.GetChild(0).gameObject);
+        }
+    }
+    
+    [InspectorButton("Generate")] public bool generate;
     private void Generate()
     {
+        //Clear old
         generate = false;
-        if(plants != null)
-            foreach (GameObject g in plants)
-            {
-                DestroyImmediate(g);
-            }
+        while(transform.childCount > 1) DestroyImmediate(transform.GetChild(0).gameObject);
 
-        plants = new List<GameObject>();
+        List<(Vector3, float)> objects = new List<(Vector3, float)>();
 
-        int numberOfPlants = Mathf.RoundToInt(density / 10 * (Mathf.PI * radius * radius));
+        int numberOfPlants = Mathf.RoundToInt((density / 10)  * transform.localScale.magnitude);
+        
         for (int i = 0; i < numberOfPlants; i++)
         {
             PlantWeightPair p = b.Plants[getRandomWeighted(b)];
-            GameObject output = PrefabUtility.InstantiatePrefab(p.getMesh(), this.transform) as GameObject;
-            output.transform.position = getValidPos();
-            output.transform.rotation = p.getRot();
-            output.transform.localScale = Vector3.one * p.getSize();
-            plants.Add(output);
+            
+            Vector3 initialpos = Random.insideUnitSphere;
+
+            Vector3 posadjusted = Vector3.zero;
+
+            Vector3 spherePoint = transform.TransformPoint(initialpos + Vector3.up);
+        
+            RaycastHit h;
+            Ray r = new Ray(spherePoint, Vector3.down);
+            if (Physics.Raycast(r, out h, transform.localScale.magnitude * 2, validplacement)
+                && !foundCloseTuple((h.point, p.GetCrowdDist), objects) && Vector3.Dot(h.normal, Vector3.up) > maxsteepness)
+            {
+
+                posadjusted = h.point;
+            }
+            else
+            {
+                continue;
+            }
+            
+            GameObject output = PrefabUtility.InstantiatePrefab(p.GetGameObject, this.transform) as GameObject;
+
+            output.transform.position = posadjusted;
+            output.transform.rotation = p.GetRotation;
+            output.transform.localScale = transform.InverseTransformVector(Vector3.one * p.GetScale); 
+            output.transform.parent = this.transform;
+            objects.Add((output.transform.position, p.GetCrowdDist));
         }
+        
     }
 
+  
     private int getRandomWeighted(Biome biome)
     {
-        List<int> outputs = new List<int>();
-
-        int index = 0;
-        foreach (PlantWeightPair p in biome.Plants)
+        float accumulatedWeight = 0;
+        List<(float, float, int)> weights = new List<(float, float, int)>();
+        for(int i = 0; i< biome.Plants.Length; i++)
         {
-            for (int i = 0; i < p.Weight; ++i)
-            {
-                outputs.Add(index);
-            }
-
-            index += 1;
+            weights.Add((accumulatedWeight, accumulatedWeight + biome.Plants[i].Weight,i));
+            accumulatedWeight += biome.Plants[i].Weight;
         }
 
-        return (outputs[Random.Range(0, outputs.Count)]);
-    }
-
-    private void OnDrawGizmos()
-    {
-        Gizmos.DrawWireSphere(this.transform.position, radius);
-    }
-
-    private Vector3 getValidPos()
-    {
-
-        int errorcatch = 0;
-        while (true)
+        float random = Random.Range(0, accumulatedWeight);
+        foreach ((float, float, int) p in weights)
         {
-            Vector2 circlepoint = Random.insideUnitCircle * radius;
-            Vector3 globalizedUp = this.transform.position + new Vector3(circlepoint.x, radius, circlepoint.y);
+            if (random >= p.Item1 && random < p.Item2) return p.Item3;
+        }
 
-            RaycastHit h;
-            Ray r = new Ray(globalizedUp, Vector3.down);
-            if (Physics.Raycast(r, out h, radius * 2, validplacement))
+        return -1;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.matrix = Gizmos.matrix * transform.localToWorldMatrix;
+        Gizmos.DrawWireSphere(Vector3.zero, 1);
+    }
+
+    bool foundCloseTuple((Vector3, float) a, List<(Vector3, float)> elements)
+    {
+        for (int i = 0; i < elements.Count; i++)
+        {
+            if (Vector3.Distance(a.Item1, elements[i].Item1) < Mathf.Max(a.Item2, elements[i].Item2))
             {
-                return h.point;
-            }
-
-            errorcatch += 1;
-            if (errorcatch > 10)
-            {
-                throw (new Exception("No valid positions found"));
-
+                return true;
             }
         }
 
-        return Vector3.zero;
+        return false;
     }
+
 }

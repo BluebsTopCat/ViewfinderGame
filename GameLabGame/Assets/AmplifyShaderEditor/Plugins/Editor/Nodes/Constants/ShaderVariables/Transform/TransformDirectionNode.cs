@@ -39,60 +39,60 @@ namespace AmplifyShaderEditor
 		private const string SafeNormalizeOptionStr = "Safe";
 
 		private const string AseObjectToWorldDirVarName = "objToWorldDir";
-		private const string AseObjectToWorldDirFormat = "mul( unity_ObjectToWorld, float4( {0}, 0 ) ).xyz";
-		private const string AseSRPObjectToWorldDirFormat = "mul( GetObjectToWorldMatrix(), float4( {0}, 0 ) ).xyz";
+		private const string AseObjectToWorldDirFormat = "mul( unity_ObjectToWorld, float4( {0}, 0.0 ) ).xyz";
+		private const string AseSRPObjectToWorldDirFormat = "mul( GetObjectToWorldMatrix(), float4( {0}, 0.0 ) ).xyz";
 
 		private const string AseObjectToViewDirVarName = "objToViewDir";
-		private const string AseObjectToViewDirFormat = "mul( UNITY_MATRIX_IT_MV, float4( {0}, 0 ) ).xyz";
-		private const string AseHDObjectToViewDirFormat = "TransformWorldToViewDir( TransformObjectToWorldDir( {0} ))";
+		private const string AseObjectToViewDirFormat = "mul( UNITY_MATRIX_IT_MV, float4( {0}, 0.0 ) ).xyz";
+		private const string AseHDObjectToViewDirFormat = "TransformWorldToViewDir( TransformObjectToWorldDir( {0} ) )";
 
 		private const string AseWorldToObjectDirVarName = "worldToObjDir";
-		private const string AseWorldToObjectDirFormat = "mul( unity_WorldToObject, float4( {0}, 0 ) ).xyz";
-		private const string AseSRPWorldToObjectDirFormat = "mul( GetWorldToObjectMatrix(), float4( {0}, 0 ) ).xyz";
+		private const string AseWorldToObjectDirFormat = "mul( unity_WorldToObject, float4( {0}, 0.0 ) ).xyz";
+		private const string AseSRPWorldToObjectDirFormat = "mul( GetWorldToObjectMatrix(), float4( {0}, 0.0 ) ).xyz";
 
 
 		private const string AseWorldToViewDirVarName = "worldToViewDir";
-		private const string AseWorldToViewDirFormat = "mul( UNITY_MATRIX_V, float4( {0}, 0 ) ).xyz";
+		private const string AseWorldToViewDirFormat = "mul( UNITY_MATRIX_V, float4( {0}, 0.0 ) ).xyz";
 
 		private const string AseViewToObjectDirVarName = "viewToObjDir";
-		private const string AseViewToObjectDirFormat = "mul( UNITY_MATRIX_T_MV, float4( {0}, 0 ) ).xyz";
+		private const string AseViewToObjectDirFormat = "mul( UNITY_MATRIX_T_MV, float4( {0}, 0.0 ) ).xyz";
 
 		private const string AseViewToWorldDirVarName = "viewToWorldDir";
-		private const string AseViewToWorldDirFormat = "mul( UNITY_MATRIX_I_V, float4( {0}, 0 ) ).xyz";
+		private const string AseViewToWorldDirFormat = "mul( UNITY_MATRIX_I_V, float4( {0}, 0.0 ) ).xyz";
 
 		///////////////////////////////////////////////////////////
 		private const string AseObjectToClipDirVarName = "objectToClipDir";
-		private const string AseObjectToClipDirFormat = "mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, float4({0}, 0.0)))";
-		private const string AseSRPObjectToClipDirFormat = "TransformWorldToHClipDir(TransformObjectToWorldDir({0}))";
+		private const string AseObjectToClipDirFormat = "mul( UNITY_MATRIX_VP, mul( unity_ObjectToWorld, float4( {0}, 0.0 ) ) ).xyz";
+		private const string AseSRPObjectToClipDirFormat = "TransformWorldToHClipDir( TransformObjectToWorldDir( {0} ) )";
 
 		private const string AseWorldToClipDirVarName = "worldToClipDir";
-		private const string AseWorldToClipDirFormat = "mul(UNITY_MATRIX_VP, float4({0}, 0.0))";
-		private const string AseSRPWorldToClipDirFormat = "TransformWorldToHClipDir({0})";
+		private const string AseWorldToClipDirFormat = "mul( UNITY_MATRIX_VP, float4( {0}, 0.0 ) ).xyz";
+		private const string AseSRPWorldToClipDirFormat = "TransformWorldToHClipDir( {0} )";
 
 		private const string AseViewToClipDirVarName = "viewToClipDir";
-		private const string AseViewToClipDirFormat = "mul(UNITY_MATRIX_P, float4({0}, 0.0))";
-		private const string AseSRPViewToClipDirFormat = "mul(GetViewToHClipMatrix(), float4({0}, 1.0))";
+		private const string AseViewToClipDirFormat = "mul( UNITY_MATRIX_P, float4( {0}, 0.0 ) ).xyz";
+		private const string AseSRPViewToClipDirFormat = "mul( GetViewToHClipMatrix(), float4( {0}, 1.0 ) ).xyz";
 		//
 		private const string AseClipToObjectDirVarName = "clipToObjectDir";
 
-		private const string AseClipToObjectDirFormat = "mul( UNITY_MATRIX_IT_MV, mul( unity_CameraInvProjection,float4({0},0)) ).xyz";
-		private const string AseClipToWorldDirFormat = "mul( UNITY_MATRIX_I_V, mul( unity_CameraInvProjection,float4({0},0)) ).xyz";
-		private const string AseClipToViewDirFormat = " mul( unity_CameraInvProjection,float4({0},0)).xyz";
-		private const string AseHDClipToObjectDirFormat = "mul( UNITY_MATRIX_I_M, mul( UNITY_MATRIX_I_VP,float4({0},0)) ).xyz";
+		private const string AseClipToObjectDirFormat = "mul( UNITY_MATRIX_IT_MV, mul( unity_CameraInvProjection, float4( {0}, 0.0 ) ) ).xyz";
+		private const string AseClipToWorldDirFormat = "mul( UNITY_MATRIX_I_V, mul( unity_CameraInvProjection, float4( {0}, 0.0 ) ) ).xyz";
+		private const string AseClipToViewDirFormat = " mul( unity_CameraInvProjection, float4( {0}, 0.0 ) ).xyz";
+		private const string AseHDClipToObjectDirFormat = "mul( UNITY_MATRIX_I_M, mul( UNITY_MATRIX_I_VP, float4( {0}, 0.0) ) ).xyz";
 
 		private const string AseClipToWorldDirVarName = "clipToWorldDir";
-		private const string AseHDClipToWorldDirFormat = "mul( UNITY_MATRIX_I_VP, float4({0},0) ).xyz";
+		private const string AseHDClipToWorldDirFormat = "mul( UNITY_MATRIX_I_VP, float4( {0}, 0.0 ) ).xyz";
 
 		private const string AseClipToViewDirVarName = "clipToViewDir";
-		private const string AseHDClipToViewDirFormat = " mul( UNITY_MATRIX_I_P,float4({0},0)).xyz";
-		private const string AseClipToNDC = "{0}.xyz/{0}.w";
+		private const string AseHDClipToViewDirFormat = " mul( UNITY_MATRIX_I_P,float4( {0}, 0.0 ) ).xyz";
+		private const string AseClipToNDC = "{0}.xyz / {0}.w";
 
 		/////////////////////////////////////////////////////
 		private const string AseObjectToTangentDirVarName = "objectToTangentDir";
 		private const string AseWorldToTangentDirVarName = "worldToTangentDir";
 		private const string AseViewToTangentDirVarName = "viewToTangentDir";
 		private const string AseClipToTangentDirVarName = "clipToTangentDir";
-		private const string ASEWorldToTangentFormat = "mul( ase_worldToTangent, {0})";
+		private const string ASEWorldToTangentFormat = "mul( ase_worldToTangent, {0} )";
 
 
 		private const string AseTangentToObjectDirVarName = "tangentTobjectDir";
@@ -187,7 +187,7 @@ namespace AmplifyShaderEditor
 						default: case TransformSpaceTo.Object: break;
 						case TransformSpaceTo.World:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BuiltIn )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BiRP )
 								result = string.Format( AseSRPObjectToWorldDirFormat, result );
 							else
 								result = string.Format( AseObjectToWorldDirFormat, result );
@@ -196,7 +196,7 @@ namespace AmplifyShaderEditor
 						break;
 						case TransformSpaceTo.View:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HD )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HDRP )
 								result = string.Format( AseHDObjectToViewDirFormat, result );
 							else
 								result = string.Format( AseObjectToViewDirFormat, result );
@@ -205,7 +205,7 @@ namespace AmplifyShaderEditor
 						break;
 						case TransformSpaceTo.Clip:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BuiltIn )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BiRP )
 							{
 								result = string.Format( AseSRPObjectToClipDirFormat, result );
 							}
@@ -225,7 +225,7 @@ namespace AmplifyShaderEditor
 					{
 						case TransformSpaceTo.Object:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BuiltIn )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BiRP )
 								result = string.Format( AseSRPWorldToObjectDirFormat, result );
 							else
 								result = string.Format( AseWorldToObjectDirFormat, result );
@@ -242,7 +242,7 @@ namespace AmplifyShaderEditor
 						break;
 						case TransformSpaceTo.Clip:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BuiltIn )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BiRP )
 							{
 								result = string.Format( AseSRPWorldToClipDirFormat, result );
 							}
@@ -275,7 +275,7 @@ namespace AmplifyShaderEditor
 						default: case TransformSpaceTo.View: break;
 						case TransformSpaceTo.Clip:
 						{
-							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BuiltIn )
+							if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType != TemplateSRPType.BiRP )
 							{
 								result = string.Format( AseSRPViewToClipDirFormat, result );
 							}
@@ -295,7 +295,7 @@ namespace AmplifyShaderEditor
 				//	{
 				//		case TransformSpace.Object:
 				//		{
-				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HD )
+				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HDRP )
 				//			{
 				//				result = string.Format( AseHDClipToObjectDirFormat, result );
 				//			}
@@ -308,7 +308,7 @@ namespace AmplifyShaderEditor
 				//		break;
 				//		case TransformSpace.World:
 				//		{
-				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HD )
+				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HDRP )
 				//			{
 				//				result = string.Format( AseHDClipToWorldDirFormat, result );
 				//			}
@@ -321,7 +321,7 @@ namespace AmplifyShaderEditor
 				//		break;
 				//		case TransformSpace.View:
 				//		{
-				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HD )
+				//			if( dataCollector.IsTemplate && dataCollector.TemplateDataCollectorInstance.CurrentSRPType == TemplateSRPType.HDRP )
 				//			{
 				//				result = string.Format( AseHDClipToViewDirFormat, result );
 				//			}

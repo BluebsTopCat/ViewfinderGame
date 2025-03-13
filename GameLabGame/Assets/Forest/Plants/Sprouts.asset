@@ -15,5 +15,5 @@ MonoBehaviour:
   meshVariants:
   - {fileID: 5119288661493347300, guid: d523bf7441c26184983419cfb8dda093, type: 3}
   - {fileID: 4410003703841199380, guid: 83d07852fbd2cac4f99e612aee9da997, type: 3}
-  size: 1
+  crowding: 0.05
   scaleVariation: {x: 0.8, y: 1.2}

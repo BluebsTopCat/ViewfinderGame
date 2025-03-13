@@ -7,7 +7,9 @@ using UnityEngine;
 public class FolliageType : ScriptableObject
 {
    public GameObject[] meshVariants;
-   public float size = 1f;
+   public bool ignoreChunking = false;
+   public float crowding = 1f;
    [MinMaxSlider(0,2)]
    public Vector2 scaleVariation = new Vector2(1f, 1f);
+   
 }

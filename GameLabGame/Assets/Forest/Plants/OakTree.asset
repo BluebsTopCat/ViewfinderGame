@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: OakTree
   m_EditorClassIdentifier: 
   meshVariants:
-  - {fileID: 919132149155446097, guid: c6e71358f29f51a4aaf2166343bd8045, type: 3}
-  - {fileID: 919132149155446097, guid: 661b38260b015d046acafbd033a9c9e3, type: 3}
-  - {fileID: 919132149155446097, guid: 781b9c0afb068fa4c9ab4e01393d63bf, type: 3}
-  size: 1
-  scaleVariation: {x: 0.5, y: 1.2}
+  - {fileID: 4882095517350673200, guid: 88c79697da879df4990f3e6a25ce2391, type: 3}
+  - {fileID: 4316461387919159949, guid: 27d440c29476ae04e9db5546161f2950, type: 3}
+  - {fileID: 4842059123908035069, guid: 21765dec0b7e04a4f952d58a4b83810e, type: 3}
+  ignoreChunking: 0
+  crowding: 0.5
+  scaleVariation: {x: 0.5, y: 1.4824446}

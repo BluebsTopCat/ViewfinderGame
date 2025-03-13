@@ -90,6 +90,8 @@ namespace AmplifyShaderEditor
 		private const string AutoRegisterStr = "Auto-Register";
 		private const string DependenciesStr = "Dependencies";
 
+		private const string DefaultSamplerStateStr = "_Linear_Repeat";
+
 		private const string VarRegexReplacer = @"\b{0}\b";
 		private readonly string[] PrecisionLabelsExtraLocal = { "Float" , "Half" , "Inherit Local" };
 
@@ -1268,7 +1270,7 @@ namespace AmplifyShaderEditor
 
 			if( string.IsNullOrEmpty( m_code ) )
 			{
-				UIUtils.ShowMessage( UniqueId , string.Format( "Custom Expression \"{0}\" need to have code associated" , m_customExpressionName ) , MessageSeverity.Warning );
+				UIUtils.ShowMessage( UniqueId , string.Format( "Custom Expression '{0}' need to have code associated" , m_customExpressionName ) , MessageSeverity.Warning );
 				return "0";
 			}
 
@@ -1287,10 +1289,10 @@ namespace AmplifyShaderEditor
 				!codeContainsReturn &&
 				m_mode == CustomExpressionMode.Create && !m_voidMode )
 			{
-				UIUtils.ShowMessage( UniqueId , string.Format( "Custom Expression \"{0}\" has a non-void return type but no return instruction was detected" , m_customExpressionName ) , MessageSeverity.Error );
+				UIUtils.ShowMessage( UniqueId , string.Format( "Custom Expression '{0}' has a non-void return type but no return instruction was detected" , m_customExpressionName ) , MessageSeverity.Error );
 
 				if( outputId != 0 )
-					UIUtils.ShowMessage( UniqueId , string.Format( "Attempting to get value on Custom Expression \"{0}\" from inexisting \"{1}\" inout/out variable" , m_customExpressionName , m_outputPorts[ outputId ].Name ) , MessageSeverity.Error );
+					UIUtils.ShowMessage( UniqueId , string.Format( "Attempting to get value on Custom Expression '{0}' from inexisting '{1}' inout/out variable" , m_customExpressionName , m_outputPorts[ outputId ].Name ) , MessageSeverity.Error );
 
 				return "0";
 			}
@@ -1356,6 +1358,10 @@ namespace AmplifyShaderEditor
 						if( m_inputPorts[ i ].DataType != WirePortDataType.OBJECT )
 						{
 							string result = m_inputPorts[ i ].GeneratePortInstructions( ref dataCollector );
+							if ( !m_inputPorts[ i ].IsConnected && m_inputPorts[ i ].DataType == WirePortDataType.SAMPLERSTATE )
+							{
+								result = GeneratorUtils.GenerateSamplerState( ref dataCollector, UniqueId, DefaultSamplerStateStr, VariableMode.Create );
+							}
 							dataCollector.AddLocalVariable( UniqueId , CurrentPrecisionType , m_inputPorts[ i ].DataType , inputPortLocalVar , result );
 						}
 						else
@@ -1428,7 +1434,12 @@ namespace AmplifyShaderEditor
 									}
 									else
 									{
-										dataCollector.AddLocalVariable( UniqueId , CurrentPrecisionType , m_inputPorts[ i ].DataType , inputPortLocalVar , m_inputPorts[ i ].WrappedInternalData );
+										string result = m_inputPorts[ i ].WrappedInternalData;
+										if ( m_inputPorts[ i ].DataType == WirePortDataType.SAMPLERSTATE )
+										{
+											result = GeneratorUtils.GenerateSamplerState( ref dataCollector, UniqueId, DefaultSamplerStateStr, VariableMode.Create );
+										}
+										dataCollector.AddLocalVariable( UniqueId, CurrentPrecisionType, m_inputPorts[ i ].DataType, inputPortLocalVar, result );
 									}
 								}
 
