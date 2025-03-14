@@ -4,7 +4,10 @@ ShaderImporter:
   externalObjects: {}
   defaultTextures:
   - GrungeGlobal: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
-  - _TopTexture1: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
+  - GrungeGlobal: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
+  - _TexBot: {fileID: 2800000, guid: c0b2ee3230283dc46b9b862c4d79909f, type: 3}
+  - _TopTexture3: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
+  - _TopTexture2: {fileID: 2800000, guid: 7941db256bb0aa847988324de025c7d3, type: 3}
   nonModifiableTextures: []
   userData: 
   assetBundleName: 

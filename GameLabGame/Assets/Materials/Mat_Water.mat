@@ -121,7 +121,7 @@ Material:
     - _Float1: 12.7
     - _Foam: 0.2
     - _FoamSmoothness: 0.1
-    - _FogDesnity: 0.317
+    - _FogDesnity: 0
     - _FogOffset: -0.5
     - _Fresnel: 0
     - _FresnelSmoothness: 0

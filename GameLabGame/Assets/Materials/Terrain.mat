@@ -227,7 +227,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _Step: 0.514
+    - _Step: 0.285
     - _SunDisk: 1
     - _SunDiskSharpness: 0
     - _SunDiskSize: 0

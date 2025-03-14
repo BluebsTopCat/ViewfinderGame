@@ -15,5 +15,3 @@ MonoBehaviour:
   Plants:
   - Plant: {fileID: 11400000, guid: 53b71955382295f46a6a2dd09adc6b0d, type: 2}
     Weight: 7.37
-  - Plant: {fileID: 11400000, guid: 510bf0ed372e7ae42be65c7f77379908, type: 2}
-    Weight: 2.24

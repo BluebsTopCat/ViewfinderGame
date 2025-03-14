@@ -18,4 +18,4 @@ MonoBehaviour:
   - {fileID: 4842059123908035069, guid: 21765dec0b7e04a4f952d58a4b83810e, type: 3}
   ignoreChunking: 0
   crowding: 0.5
-  scaleVariation: {x: 0.5, y: 1.4824446}
+  scaleVariation: {x: 0.85608304, y: 1.48}

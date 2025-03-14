@@ -38,9 +38,9 @@ public class Enviornment : MonoBehaviour
         UpdateShaders();
     }
 
-    private void Start()
+    private void Update()
     {
-        InvokeRepeating(nameof(UpdateSkyBox),0f, 60f * minutesPerDay/updatesPerDay);
+        UpdateSkyBox();
     }
 
     void UpdateShaders()
@@ -68,7 +68,7 @@ public class Enviornment : MonoBehaviour
 
     void UpdateSkyBox()
     {
-        globalTime +=   24f / ( updatesPerDay * minutesPerDay);
+        globalTime +=  (Time.deltaTime * 24) / (60 * minutesPerDay);
         _cloudAcc.x = RandBetween(-1, 1, globalTime, .1f);
         _cloudAcc.y = RandBetween(-1, 1, globalTime + 50, .1f);
         _cloudVel += new Vector2(_cloudAcc.x * Time.deltaTime, _cloudAcc.y * Time.deltaTime);

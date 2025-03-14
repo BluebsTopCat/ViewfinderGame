@@ -191,7 +191,7 @@ Material:
     - _Tint: {r: 1, g: 1, b: 1, a: 0}
     - _TipColor: {r: 1, g: 1, b: 1, a: 1}
     - _VTInfoBlock: {r: 0, g: 0, b: 0, a: 0}
-    - _Variation: {r: 0, g: 0, b: 0, a: 0}
+    - _Variation: {r: 0.025, g: 0.025, b: 0.005, a: 0}
     - _WindDirection: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &8953918266419800834
