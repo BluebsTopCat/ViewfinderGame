@@ -8,9 +8,8 @@ public class SkyboxCamera : MonoBehaviour
 {
     public float skyboxScale = .05f;
 
-    private PlayerController _player;
     private Camera _camera;
-   
+    private Camera _mainCamera;
 
     // Update is called once per frame
     private void Start()
@@ -18,24 +17,23 @@ public class SkyboxCamera : MonoBehaviour
         setup();
     }
 
-    void Update()
+    void LateUpdate()
     {
-        if (_player == null)
+
+        if (_mainCamera == null)
         {
-            setup();
+            _mainCamera = Camera.main;
             return;
         }
 
-        Transform camTransform = _player.camera.transform;
-        
-        transform.localPosition = camTransform.position * skyboxScale;
-        transform.rotation = camTransform.rotation;
+        _camera.fieldOfView = _mainCamera.fieldOfView;
+        transform.localPosition = _mainCamera.transform.position * skyboxScale;
+        transform.rotation = _mainCamera.transform.rotation;
     }
 
     void setup()
     {
-        _player = PlayerController.Instance;
         _camera = this.GetComponent<Camera>();
-        _camera.fieldOfView = _player.camera.fieldOfView;
+        _mainCamera = Camera.main;
     }
 }

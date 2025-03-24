@@ -13,6 +13,8 @@ public class PlantArea : MonoBehaviour
     public float density;
     public LayerMask validplacement;
 
+    [Range(0, 1)] public float usehitnormal = 0;
+
     [InspectorButton("Delete")] public bool delete;
     // Start is called before the first frame update
     
@@ -63,7 +65,8 @@ public class PlantArea : MonoBehaviour
             GameObject output = PrefabUtility.InstantiatePrefab(p.GetGameObject, this.transform) as GameObject;
 
             output.transform.position = posadjusted;
-            output.transform.rotation = p.GetRotation;
+            output.transform.rotation =
+                Quaternion.AngleAxis(p.GetRotation, Vector3.Lerp(Vector3.up, h.normal, usehitnormal));
             output.transform.localScale = transform.InverseTransformVector(Vector3.one * p.GetScale); 
             output.transform.parent = this.transform;
             objects.Add((output.transform.position, p.GetCrowdDist));

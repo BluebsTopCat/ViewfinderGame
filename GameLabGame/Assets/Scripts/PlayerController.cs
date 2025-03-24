@@ -1,12 +1,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cinemachine;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Collider))]
 public class PlayerController : MonoBehaviour
 {
+    public enum PlayerState
+    {
+        PAUSED, PLAYING, PHOTO
+    }
+
+    public PlayerState State;
     public static PlayerController Instance;
     [Header("Player Settings")] 
     public float height = 2f;
@@ -35,8 +42,9 @@ public class PlayerController : MonoBehaviour
     [Header("Layermasks")] 
     public LayerMask groundMask;
     [Header("Components")]
-    public Camera camera;
-
+    public CinemachineVirtualCamera _camera;
+    public Transform _camerashiftpoint;
+    private Animator _animator;
     private CapsuleCollider _collider;
     private Rigidbody _rigidbody;
 
@@ -69,12 +77,16 @@ public class PlayerController : MonoBehaviour
         _collider.center = new Vector3(0f, crouchHeight * underpass * .5f, 0f); 
         
         _rigidbody = GetComponent<Rigidbody>();
+        _animator = GetComponent<Animator>();
 
     }
 
     // Update only gets inputs- everything else should be done in fixedupdate
     void Update()
     {
+
+        if (State == PlayerState.PAUSED) return;
+        
         _moveInputs = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         
         _lookInputs = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
@@ -83,6 +95,13 @@ public class PlayerController : MonoBehaviour
 
         _sprintHeld = Input.GetKey(KeyCode.LeftShift);
         _crouchHeld = Input.GetKey(KeyCode.LeftControl);
+
+        State = Input.GetMouseButton(1) ? PlayerState.PHOTO : PlayerState.PLAYING;
+        
+        _animator.SetBool("InCamera", State == PlayerState.PHOTO);
+        float speed = _moveInputs.magnitude * (_sprintHeld ? 2 : 1) * (_crouchHeld ? .5f : 1); 
+        _animator.SetFloat("Speed", speed);
+
     }
     private void FixedUpdate()
     {
@@ -107,7 +126,7 @@ public class PlayerController : MonoBehaviour
         _xRotation -= mouseY;
         _xRotation = Mathf.Clamp(_xRotation, -lookDirectionalClamp, lookDirectionalClamp);
 
-        camera.transform.localRotation = Quaternion.Euler(_xRotation, 0f, 0f);
+        _camerashiftpoint.localRotation = Quaternion.Euler(_xRotation, 0f, 0f);
         this.transform.Rotate(Vector3.up * mouseX);
 
     }

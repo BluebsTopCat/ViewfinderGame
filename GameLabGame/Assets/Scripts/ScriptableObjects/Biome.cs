@@ -22,8 +22,8 @@ public class PlantWeightPair
     public float GetCrowdDist => Plant.crowding;
     public GameObject GetGameObject => Plant.meshVariants[Random.Range(0, Plant.meshVariants.Length)];
     public float GetScale => Random.Range(Plant.scaleVariation.x, Plant.scaleVariation.y);
-    public Quaternion GetRotation =>  Quaternion.Euler(new Vector3(0f, Random.Range(0, 360), 0f)); 
-    
+    public float GetRotation => Random.Range(0, 360);
+
 }
 
 

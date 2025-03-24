@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{975ef9e0-c939-4f41-8aa5-0055a52a159a}">
+		<property name="assetPath">
+			<value>SFX_LeavesRustle.ogg</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>136.37981859410431</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{05fb52cd-90a7-49dd-96a1-85fae1fe3bce}</destination>
+		</relationship>
+	</object>
+</objects>

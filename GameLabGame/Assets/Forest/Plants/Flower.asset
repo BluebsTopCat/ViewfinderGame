@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f38092ae0da387c43bfac1b4e0ce6636, type: 3}
+  m_Name: Flower
+  m_EditorClassIdentifier: 
+  meshVariants:
+  - {fileID: 2088786041590166360, guid: e3a5845e6d72ca946a337284d33afd39, type: 3}
+  - {fileID: 9020757720054142739, guid: d7e793d665e532c4d8def800b7bee38a, type: 3}
+  - {fileID: 2507315934267125997, guid: 1e0cacb8df886cf458522ae262f27726, type: 3}
+  ignoreChunking: 0
+  crowding: 0.5
+  scaleVariation: {x: 0.88, y: 1.1426922}

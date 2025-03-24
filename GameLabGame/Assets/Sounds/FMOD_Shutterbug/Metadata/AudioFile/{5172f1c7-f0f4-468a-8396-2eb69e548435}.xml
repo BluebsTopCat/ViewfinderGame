@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{5172f1c7-f0f4-468a-8396-2eb69e548435}">
+		<property name="assetPath">
+			<value>SFX_HeavyWind.ogg</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>31.004807256235829</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{05fb52cd-90a7-49dd-96a1-85fae1fe3bce}</destination>
+		</relationship>
+	</object>
+</objects>

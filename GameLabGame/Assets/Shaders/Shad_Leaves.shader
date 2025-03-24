@@ -10,6 +10,7 @@ Shader "Shad_Leaves"
 		_Albedo("Albedo", 2D) = "white" {}
 		_TransparencyCutoff("Transparency Cutoff", Range( 0 , 1)) = 0
 		_Variation("Variation", Vector) = (0,0,0,0)
+		_Billboarding("Billboarding", Range( 0 , 1)) = 0
 		[HideInInspector] _texcoord( "", 2D ) = "white" {}
 
 
@@ -243,7 +244,6 @@ Shader "Shad_Leaves"
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
 			#define ASE_NEEDS_FRAG_SCREEN_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_VIEW_DIR
-			#define ASE_NEEDS_FRAG_NORMAL
 			#define ASE_NEEDS_FRAG_SHADOWCOORDS
 			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
 			#pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -272,6 +272,7 @@ Shader "Shad_Leaves"
 				float4 texcoord1 : TEXCOORD1;
 				float4 texcoord2 : TEXCOORD2;
 				float4 ase_color : COLOR;
+				float4 ase_tangent : TANGENT;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -294,8 +295,9 @@ Shader "Shad_Leaves"
 				#endif
 				float4 ase_texcoord6 : TEXCOORD6;
 				float4 ase_texcoord7 : TEXCOORD7;
-				float3 ase_normal : NORMAL;
 				float4 ase_texcoord8 : TEXCOORD8;
+				float4 ase_texcoord9 : TEXCOORD9;
+				float4 ase_texcoord10 : TEXCOORD10;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -304,6 +306,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -431,7 +434,22 @@ Shader "Shad_Leaves"
 				return 42.0 * dot( m, px);
 			}
 			
-			half4 CalculateShadowMask216_g187(  )
+			float3 PerturbNormal107_g266( float3 surf_pos, float3 surf_norm, float height, float scale )
+			{
+				// "Bump Mapping Unparametrized Surfaces on the GPU" by Morten S. Mikkelsen
+				float3 vSigmaS = ddx( surf_pos );
+				float3 vSigmaT = ddy( surf_pos );
+				float3 vN = surf_norm;
+				float3 vR1 = cross( vSigmaT , vN );
+				float3 vR2 = cross( vN , vSigmaS );
+				float fDet = dot( vSigmaS , vR1 );
+				float dBs = ddx( height );
+				float dBt = ddy( height );
+				float3 vSurfGrad = scale * 0.05 * sign( fDet ) * ( dBs * vR1 + dBt * vR2 );
+				return normalize ( abs( fDet ) * vN - vSurfGrad );
+			}
+			
+			half4 CalculateShadowMask216_g269(  )
 			{
 				#if defined(SHADOWS_SHADOWMASK) && defined(LIGHTMAP_ON)
 				half4 shadowMask = inputData.shadowMask;
@@ -483,7 +501,7 @@ Shader "Shad_Leaves"
 				return Color;
 			}
 			
-			half4 CalculateShadowMask216_g189(  )
+			half4 CalculateShadowMask216_g267(  )
 			{
 				#if defined(SHADOWS_SHADOWMASK) && defined(LIGHTMAP_ON)
 				half4 shadowMask = inputData.shadowMask;
@@ -503,6 +521,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -515,8 +535,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -526,14 +546,20 @@ Shader "Shad_Leaves"
 				
 				float3 ase_normalWS = TransformObjectToWorldNormal( input.normalOS );
 				output.ase_texcoord8.xyz = ase_normalWS;
+				float3 ase_tangentWS = TransformObjectToWorldDir( input.ase_tangent.xyz );
+				output.ase_texcoord9.xyz = ase_tangentWS;
+				float ase_tangentSign = input.ase_tangent.w * ( unity_WorldTransformParams.w >= 0.0 ? 1.0 : -1.0 );
+				float3 ase_bitangentWS = cross( ase_normalWS, ase_tangentWS ) * ase_tangentSign;
+				output.ase_texcoord10.xyz = ase_bitangentWS;
 				
 				output.ase_texcoord6.xy = input.texcoord.xy;
 				output.ase_texcoord7 = input.positionOS;
-				output.ase_normal = input.normalOS;
 				
 				//setting value to unused interpolator channels and avoid initialization warnings
 				output.ase_texcoord6.zw = 0;
 				output.ase_texcoord8.w = 0;
+				output.ase_texcoord9.w = 0;
+				output.ase_texcoord10.w = 0;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					float3 defaultVertexValue = input.positionOS.xyz;
@@ -541,7 +567,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
@@ -587,6 +613,7 @@ Shader "Shad_Leaves"
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
 				float4 ase_color : COLOR;
+				float4 ase_tangent : TANGENT;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -605,6 +632,7 @@ Shader "Shad_Leaves"
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
 				output.ase_color = input.ase_color;
+				output.ase_tangent = input.ase_tangent;
 				return output;
 			}
 
@@ -644,6 +672,7 @@ Shader "Shad_Leaves"
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
 				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
+				output.ase_tangent = patch[0].ase_tangent * bary.x + patch[1].ase_tangent * bary.y + patch[2].ase_tangent * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -705,54 +734,70 @@ Shader "Shad_Leaves"
 				float simplePerlin3D28_g191 = snoise( temp_output_21_0_g191 );
 				float simplePerlin3D29_g191 = snoise( ( temp_output_21_0_g191 + float3( 100,100,100 ) ) );
 				float3 hsvTorgb15_g191 = HSVToRGB( float3(( hsvTorgb16_g191.x + ( simplePerlin3D25_g191 * break34_g191.x ) ),( hsvTorgb16_g191.y + ( simplePerlin3D28_g191 * break34_g191.y ) ),( hsvTorgb16_g191.z + ( simplePerlin3D29_g191 * break34_g191.z ) )) );
-				float3 worldPosValue184_g187 = WorldPosition;
-				float3 WorldPosition164_g187 = worldPosValue184_g187;
+				float3 worldPosValue184_g269 = WorldPosition;
+				float3 WorldPosition164_g269 = worldPosValue184_g269;
 				float4 ase_positionSSNorm = ScreenPos / ScreenPos.w;
 				ase_positionSSNorm.z = ( UNITY_NEAR_CLIP_VALUE >= 0 ) ? ase_positionSSNorm.z : ase_positionSSNorm.z * 0.5 + 0.5;
-				float2 ScreenUV183_g187 = (ase_positionSSNorm).xy;
-				float2 ScreenUV164_g187 = ScreenUV183_g187;
-				float3 worldNormalValue185_g187 = input.ase_normal;
-				float3 WorldNormal164_g187 = worldNormalValue185_g187;
-				float3 temp_output_15_0_g187 = WorldViewDirection;
-				float3 WorldView164_g187 = temp_output_15_0_g187;
-				float3 temp_output_14_0_g187 = float3( 1,1,1 );
-				float3 SpecColor164_g187 = temp_output_14_0_g187;
-				float temp_output_18_0_g187 = 0.125;
-				float Smoothness164_g187 = temp_output_18_0_g187;
-				half4 localCalculateShadowMask216_g187 = CalculateShadowMask216_g187();
-				float4 shadowMaskValue182_g187 = localCalculateShadowMask216_g187;
-				float4 ShadowMask164_g187 = shadowMaskValue182_g187;
-				float3 localAdditionalLightsSpecularMask14x164_g187 = AdditionalLightsSpecularMask14x( WorldPosition164_g187 , ScreenUV164_g187 , WorldNormal164_g187 , WorldView164_g187 , SpecColor164_g187 , Smoothness164_g187 , ShadowMask164_g187 );
-				float3 worldPosValue184_g189 = WorldPosition;
-				float3 WorldPosition164_g189 = worldPosValue184_g189;
-				float2 ScreenUV183_g189 = (ase_positionSSNorm).xy;
-				float2 ScreenUV164_g189 = ScreenUV183_g189;
+				float2 ScreenUV183_g269 = (ase_positionSSNorm).xy;
+				float2 ScreenUV164_g269 = ScreenUV183_g269;
+				float3 surf_pos107_g266 = WorldPosition;
 				float3 ase_normalWS = input.ase_texcoord8.xyz;
-				float3 normalizedWorldNormal = normalize( ase_normalWS );
-				float3 worldNormalValue185_g189 = normalizedWorldNormal;
-				float3 WorldNormal164_g189 = worldNormalValue185_g189;
-				float3 temp_output_15_0_g189 = ( input.ase_normal * float3( -1,-1,-1 ) );
-				float3 WorldView164_g189 = temp_output_15_0_g189;
-				float3 temp_output_14_0_g189 = float3( 1,1,1 );
-				float3 SpecColor164_g189 = temp_output_14_0_g189;
-				float temp_output_18_0_g189 = 0.125;
-				float Smoothness164_g189 = temp_output_18_0_g189;
-				half4 localCalculateShadowMask216_g189 = CalculateShadowMask216_g189();
-				float4 shadowMaskValue182_g189 = localCalculateShadowMask216_g189;
-				float4 ShadowMask164_g189 = shadowMaskValue182_g189;
-				float3 localAdditionalLightsSpecularMask14x164_g189 = AdditionalLightsSpecularMask14x( WorldPosition164_g189 , ScreenUV164_g189 , WorldNormal164_g189 , WorldView164_g189 , SpecColor164_g189 , Smoothness164_g189 , ShadowMask164_g189 );
+				float3 surf_norm107_g266 = ase_normalWS;
+				float height107_g266 = ( 1.0 - ( distance( input.ase_texcoord6.xy , float2( 0.5,0.5 ) ) * 2.0 ) );
+				float scale107_g266 = 1.0;
+				float3 localPerturbNormal107_g266 = PerturbNormal107_g266( surf_pos107_g266 , surf_norm107_g266 , height107_g266 , scale107_g266 );
+				float3 ase_tangentWS = input.ase_texcoord9.xyz;
+				float3 ase_bitangentWS = input.ase_texcoord10.xyz;
+				float3x3 ase_worldToTangent = float3x3( ase_tangentWS, ase_bitangentWS, ase_normalWS );
+				float3 worldToTangentDir42_g266 = mul( ase_worldToTangent, localPerturbNormal107_g266 );
+				float3 temp_output_38_40_g265 = worldToTangentDir42_g266;
+				float3 tanToWorld0 = float3( ase_tangentWS.x, ase_bitangentWS.x, ase_normalWS.x );
+				float3 tanToWorld1 = float3( ase_tangentWS.y, ase_bitangentWS.y, ase_normalWS.y );
+				float3 tanToWorld2 = float3( ase_tangentWS.z, ase_bitangentWS.z, ase_normalWS.z );
+				float3 tanNormal12_g269 = temp_output_38_40_g265;
+				float3 worldNormal12_g269 = normalize( float3( dot( tanToWorld0, tanNormal12_g269 ), dot( tanToWorld1, tanNormal12_g269 ), dot( tanToWorld2, tanNormal12_g269 ) ) );
+				float3 worldNormalValue185_g269 = worldNormal12_g269;
+				float3 WorldNormal164_g269 = worldNormalValue185_g269;
+				float3 temp_output_15_0_g269 = WorldViewDirection;
+				float3 WorldView164_g269 = temp_output_15_0_g269;
+				float3 temp_output_14_0_g269 = float3( 1,1,1 );
+				float3 SpecColor164_g269 = temp_output_14_0_g269;
+				float temp_output_18_0_g269 = 0.0;
+				float Smoothness164_g269 = temp_output_18_0_g269;
+				half4 localCalculateShadowMask216_g269 = CalculateShadowMask216_g269();
+				float4 shadowMaskValue182_g269 = localCalculateShadowMask216_g269;
+				float4 ShadowMask164_g269 = shadowMaskValue182_g269;
+				float3 localAdditionalLightsSpecularMask14x164_g269 = AdditionalLightsSpecularMask14x( WorldPosition164_g269 , ScreenUV164_g269 , WorldNormal164_g269 , WorldView164_g269 , SpecColor164_g269 , Smoothness164_g269 , ShadowMask164_g269 );
+				float3 worldPosValue184_g267 = WorldPosition;
+				float3 WorldPosition164_g267 = worldPosValue184_g267;
+				float2 ScreenUV183_g267 = (ase_positionSSNorm).xy;
+				float2 ScreenUV164_g267 = ScreenUV183_g267;
+				float3 tanNormal12_g267 = temp_output_38_40_g265;
+				float3 worldNormal12_g267 = normalize( float3( dot( tanToWorld0, tanNormal12_g267 ), dot( tanToWorld1, tanNormal12_g267 ), dot( tanToWorld2, tanNormal12_g267 ) ) );
+				float3 worldNormalValue185_g267 = worldNormal12_g267;
+				float3 WorldNormal164_g267 = worldNormalValue185_g267;
+				float3 temp_output_15_0_g267 = ( WorldViewDirection * float3( -1,-1,-1 ) );
+				float3 WorldView164_g267 = temp_output_15_0_g267;
+				float3 temp_output_14_0_g267 = float3( 1,1,1 );
+				float3 SpecColor164_g267 = temp_output_14_0_g267;
+				float temp_output_18_0_g267 = 0.0;
+				float Smoothness164_g267 = temp_output_18_0_g267;
+				half4 localCalculateShadowMask216_g267 = CalculateShadowMask216_g267();
+				float4 shadowMaskValue182_g267 = localCalculateShadowMask216_g267;
+				float4 ShadowMask164_g267 = shadowMaskValue182_g267;
+				float3 localAdditionalLightsSpecularMask14x164_g267 = AdditionalLightsSpecularMask14x( WorldPosition164_g267 , ScreenUV164_g267 , WorldNormal164_g267 , WorldView164_g267 , SpecColor164_g267 , Smoothness164_g267 , ShadowMask164_g267 );
 				float ase_lightIntensity = max( max( _MainLightColor.r, _MainLightColor.g ), _MainLightColor.b ) + 1e-7;
 				float4 ase_lightColor = float4( _MainLightColor.rgb / ase_lightIntensity, ase_lightIntensity );
 				float ase_lightAtten = 0;
 				Light ase_mainLight = GetMainLight( ShadowCoords );
 				ase_lightAtten = ase_mainLight.distanceAttenuation * ase_mainLight.shadowAttenuation;
-				float3 temp_output_12_0_g186 = ( ase_lightColor.rgb * ase_lightAtten * ase_lightColor.a );
-				float3 clampResult14_g186 = clamp( temp_output_12_0_g186 , float3( 0,0,0 ) , float3( 1,1,1 ) );
-				float4 lerpResult8_g186 = lerp( ( Sky_Top * Sky_Bot ) , float4( temp_output_12_0_g186 , 0.0 ) , float4( clampResult14_g186 , 0.0 ));
-				float4 blendOpSrc15_g186 = ( _Tint * float4( hsvTorgb15_g191 , 0.0 ) );
-				float4 blendOpDest15_g186 = ( float4( max( localAdditionalLightsSpecularMask14x164_g187 , localAdditionalLightsSpecularMask14x164_g189 ) , 0.0 ) + lerpResult8_g186 );
+				float3 temp_output_12_0_g265 = ( ase_lightColor.rgb * ase_lightAtten * ase_lightColor.a );
+				float3 clampResult14_g265 = clamp( temp_output_12_0_g265 , float3( 0,0,0 ) , float3( 1,1,1 ) );
+				float4 lerpResult8_g265 = lerp( ( Sky_Top * Sky_Bot ) , float4( temp_output_12_0_g265 , 0.0 ) , float4( clampResult14_g265 , 0.0 ));
+				float4 blendOpSrc15_g265 = ( _Tint * float4( hsvTorgb15_g191 , 0.0 ) );
+				float4 blendOpDest15_g265 = ( float4( max( localAdditionalLightsSpecularMask14x164_g269 , localAdditionalLightsSpecularMask14x164_g267 ) , 0.0 ) + lerpResult8_g265 );
 				float clampResult13_g143 = clamp( ( pow( 2.0 , pow( ( unity_FogParams.x * ( 1.0 * distance( WorldPosition , _WorldSpaceCameraPos ) ) ) , 2.0 ) ) - 1.0 ) , 0.0 , 1.0 );
-				float4 lerpResult12_g143 = lerp( ( saturate(  (( blendOpSrc15_g186 > 0.5 ) ? ( 1.0 - ( 1.0 - 2.0 * ( blendOpSrc15_g186 - 0.5 ) ) * ( 1.0 - blendOpDest15_g186 ) ) : ( 2.0 * blendOpSrc15_g186 * blendOpDest15_g186 ) ) )) , Sky_Bot , clampResult13_g143);
+				float4 lerpResult12_g143 = lerp( ( saturate(  (( blendOpSrc15_g265 > 0.5 ) ? ( 1.0 - ( 1.0 - 2.0 * ( blendOpSrc15_g265 - 0.5 ) ) * ( 1.0 - blendOpDest15_g265 ) ) : ( 2.0 * blendOpSrc15_g265 * blendOpDest15_g265 ) ) )) , Sky_Bot , clampResult13_g143);
 				
 				float Transparency182 = tex2DNode89.a;
 				
@@ -874,8 +919,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : POSITION;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -898,6 +943,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -971,6 +1017,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO( output );
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.ase_texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -983,8 +1031,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -1003,7 +1051,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
 				#else
@@ -1051,8 +1099,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -1070,8 +1118,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
-				output.ase_color = input.ase_color;
 				output.ase_texcoord = input.ase_texcoord;
+				output.ase_color = input.ase_color;
 				return output;
 			}
 
@@ -1110,8 +1158,8 @@ Shader "Shad_Leaves"
 				Attributes output = (Attributes) 0;
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
-				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				output.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -1247,8 +1295,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : POSITION;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -1271,6 +1319,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -1341,6 +1390,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.ase_texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -1353,8 +1404,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -1373,7 +1424,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
@@ -1403,8 +1454,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -1422,8 +1473,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
-				output.ase_color = input.ase_color;
 				output.ase_texcoord = input.ase_texcoord;
+				output.ase_color = input.ase_color;
 				return output;
 			}
 
@@ -1462,8 +1513,8 @@ Shader "Shad_Leaves"
 				Attributes output = (Attributes) 0;
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
-				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				output.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -1601,8 +1652,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : POSITION;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -1618,6 +1669,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -1699,6 +1751,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.ase_texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -1711,8 +1765,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -1731,7 +1785,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
@@ -1753,8 +1807,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -1772,8 +1826,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
-				output.ase_color = input.ase_color;
 				output.ase_texcoord = input.ase_texcoord;
+				output.ase_color = input.ase_color;
 				return output;
 			}
 
@@ -1812,8 +1866,8 @@ Shader "Shad_Leaves"
 				Attributes output = (Attributes) 0;
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
-				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				output.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -1927,8 +1981,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : POSITION;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -1944,6 +1998,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -2024,6 +2079,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.ase_texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -2036,8 +2093,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -2056,7 +2113,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
@@ -2076,8 +2133,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -2095,8 +2152,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
-				output.ase_color = input.ase_color;
 				output.ase_texcoord = input.ase_texcoord;
+				output.ase_color = input.ase_color;
 				return output;
 			}
 
@@ -2135,8 +2192,8 @@ Shader "Shad_Leaves"
 				Attributes output = (Attributes) 0;
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
-				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				output.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -2269,8 +2326,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : POSITION;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -2289,6 +2346,7 @@ Shader "Shad_Leaves"
 			float4 _Tint;
 			float4 _Albedo_ST;
 			float3 _Variation;
+			float _Billboarding;
 			float _TransparencyCutoff;
 			#ifdef ASE_TESSELLATION
 				float _TessPhongStrength;
@@ -2367,6 +2425,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+				float3 appendResult294 = (float3((float2( -1,-1 ) + (input.ase_texcoord.xy - float2( 0,0 )) * (float2( 1,1 ) - float2( -1,-1 )) / (float2( 1,1 ) - float2( 0,0 ))) , 0.0));
+				float3 normalizeResult306 = normalize( mul( float4( mul( float4( appendResult294 , 0.0 ), UNITY_MATRIX_V ).xyz , 0.0 ), GetObjectToWorldMatrix() ).xyz );
 				float Magnitude41_g142 = distance( float3( 0,0,0 ) , WindDir );
 				float mulTime10_g142 = _TimeParameters.x * ( Magnitude41_g142 * 5.0 );
 				float Flutter46_g142 = input.ase_color.r;
@@ -2379,8 +2439,8 @@ Shader "Shad_Leaves"
 				float3 ase_positionWS = TransformObjectToWorld( ( input.positionOS ).xyz );
 				float3 rotatedValue23_g142 = RotateAroundAxis( float3( 0,0,0 ), ase_positionWS, float3( 0,1,0 ), acos( dotResult27_g142 ) );
 				float WindDirOffset31_g142 = ( rotatedValue23_g142.x / 10.0 );
-				float2 temp_cast_1 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
-				float simplePerlin2D4_g142 = snoise( temp_cast_1 );
+				float2 temp_cast_6 = (( ( mulTime10_g142 * Flutter46_g142 ) + WindDirOffset31_g142 )).xx;
+				float simplePerlin2D4_g142 = snoise( temp_cast_6 );
 				float mulTime12_g142 = _TimeParameters.x * ( Magnitude41_g142 * PI );
 				float Variation52_g142 = 0.0;
 				float VariationIntensity51_g142 = 0.0;
@@ -2398,7 +2458,7 @@ Shader "Shad_Leaves"
 					float3 defaultVertexValue = float3(0, 0, 0);
 				#endif
 
-				float3 vertexValue = ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ).xyz;
+				float3 vertexValue = ( float4( ( _Billboarding * normalizeResult306 ) , 0.0 ) + ( float4( ( simplePerlin2D4_g142 * input.normalOS * 0.1 * Magnitude41_g142 * Flutter46_g142 ) , 0.0 ) + ( WindDir7_g142 * ( sin( ( mulTime12_g142 + Variation52_g142 + WindDirOffset31_g142 ) ) * VariationIntensity51_g142 ) * 0.25 * Magnitude41_g142 ) + ( WindDir7_g142 * ( sin( mulTime57_g142 ) * ( max( ( input.positionOS.xyz.y - 1.0 ) , 0.0 ) * ase_objectScale.y ) ) * 0.25 * Magnitude41_g142 ) + float4( input.positionOS.xyz , 0.0 ) ) ).xyz;
 
 				#ifdef ASE_ABSOLUTE_VERTEX_POS
 					input.positionOS.xyz = vertexValue;
@@ -2422,8 +2482,8 @@ Shader "Shad_Leaves"
 			{
 				float4 positionOS : INTERNALTESSPOS;
 				float3 normalOS : NORMAL;
-				float4 ase_color : COLOR;
 				float4 ase_texcoord : TEXCOORD0;
+				float4 ase_color : COLOR;
 
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
@@ -2441,8 +2501,8 @@ Shader "Shad_Leaves"
 				UNITY_TRANSFER_INSTANCE_ID(input, output);
 				output.positionOS = input.positionOS;
 				output.normalOS = input.normalOS;
-				output.ase_color = input.ase_color;
 				output.ase_texcoord = input.ase_texcoord;
+				output.ase_color = input.ase_color;
 				return output;
 			}
 
@@ -2481,8 +2541,8 @@ Shader "Shad_Leaves"
 				Attributes output = (Attributes) 0;
 				output.positionOS = patch[0].positionOS * bary.x + patch[1].positionOS * bary.y + patch[2].positionOS * bary.z;
 				output.normalOS = patch[0].normalOS * bary.x + patch[1].normalOS * bary.y + patch[2].normalOS * bary.z;
-				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				output.ase_texcoord = patch[0].ase_texcoord * bary.x + patch[1].ase_texcoord * bary.y + patch[2].ase_texcoord * bary.z;
+				output.ase_color = patch[0].ase_color * bary.x + patch[1].ase_color * bary.y + patch[2].ase_color * bary.z;
 				#if defined(ASE_PHONG_TESSELLATION)
 				float3 pp[3];
 				for (int i = 0; i < 3; ++i)
@@ -2570,39 +2630,63 @@ Shader "Shad_Leaves"
 }
 /*ASEBEGIN
 Version=19801
+Node;AmplifyShaderEditor.TexCoordVertexDataNode;284;1968,-368;Inherit;False;0;2;0;5;FLOAT2;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4
+Node;AmplifyShaderEditor.TFHCRemapNode;285;2176,-368;Inherit;False;5;0;FLOAT2;0,0;False;1;FLOAT2;0,0;False;2;FLOAT2;1,1;False;3;FLOAT2;-1,-1;False;4;FLOAT2;1,1;False;1;FLOAT2;0
+Node;AmplifyShaderEditor.DynamicAppendNode;294;2560,-384;Inherit;True;FLOAT3;4;0;FLOAT2;0,0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.ViewMatrixNode;304;2800,-128;Inherit;False;0;1;FLOAT4x4;0
+Node;AmplifyShaderEditor.ObjectToWorldMatrixNode;303;2912,-48;Inherit;False;0;1;FLOAT4x4;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;305;2976,-208;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT4x4;0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;302;3136,-192;Inherit;True;2;2;0;FLOAT3;0,0,0;False;1;FLOAT4x4;0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.SamplerNode;89;1313.057,-626.5845;Inherit;True;Property;_Albedo;Albedo;1;0;Create;True;0;0;0;False;0;False;-1;None;936e8b8dee7e57848984735148bd7a02;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
+Node;AmplifyShaderEditor.NormalizeNode;306;3312,-256;Inherit;True;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.RangedFloatNode;311;3200,-384;Inherit;False;Property;_Billboarding;Billboarding;6;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
 Node;AmplifyShaderEditor.RegisterLocalVarNode;182;1712,-320;Inherit;False;Transparency;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.FunctionNode;215;3133.53,-342.0042;Inherit;False;WindAprox;-1;;142;027ef23f7887b8e4cb79ae2e1343179d;0;0;1;FLOAT4;0
+Node;AmplifyShaderEditor.FunctionNode;215;3760,-144;Inherit;False;WindAprox;-1;;142;027ef23f7887b8e4cb79ae2e1343179d;0;0;1;FLOAT4;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;310;3408,-416;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.FunctionNode;241;3185.972,-834.1151;Inherit;False;CustomFog;-1;;143;b4e3a234c6bbe774b9ca2792a80812c4;0;2;1;COLOR;0,0,0,0;False;20;FLOAT;1;False;1;COLOR;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode;218;2067.425,-684.5436;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;FLOAT3;0,0,0;False;1;COLOR;0
 Node;AmplifyShaderEditor.RangedFloatNode;178;3048.417,-465.1177;Inherit;False;Property;_TransparencyCutoff;Transparency Cutoff;3;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
 Node;AmplifyShaderEditor.GetLocalVarNode;180;3055.309,-565.1641;Inherit;False;182;Transparency;1;0;OBJECT;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode;245;2210.383,-856.109;Inherit;False;Property;_Smoothness;Smoothness;4;0;Create;True;0;0;0;False;0;False;1;0.5;0;1;0;1;FLOAT;0
 Node;AmplifyShaderEditor.SamplerNode;154;2345.937,-1310.054;Inherit;True;Property;_FSmooth;FSmooth;2;0;Create;True;0;0;0;False;0;False;-1;None;36aa64354f0ba4844af761a937eea4df;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
 Node;AmplifyShaderEditor.ColorNode;8;1570.061,-876.2511;Inherit;False;Property;_Tint;Tint;0;0;Create;True;0;0;0;False;0;False;0.3450978,0.8962264,0.2494215,0;0,0.1792452,0.09793925,0;True;True;0;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
-Node;AmplifyShaderEditor.FunctionNode;282;2835.453,-788.6148;Inherit;False;FolliageLighting;-1;;186;79c0e37f7bbbb5a48bca470660b2ffbf;0;1;17;COLOR;1,1,1,0;False;1;COLOR;0
 Node;AmplifyShaderEditor.Vector3Node;244;1536,-416;Inherit;False;Property;_Variation;Variation;5;0;Create;True;0;0;0;False;0;False;0,0,0;0,0,0;0;4;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3
 Node;AmplifyShaderEditor.FunctionNode;234;1824,-608;Inherit;False;Vary;-1;;191;05df461704c15074f94ab8f19b1fc7f4;0;4;2;COLOR;0,0,0,0;False;3;FLOAT3;0,0,0;False;26;FLOAT;10;False;5;FLOAT;0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.SimpleAddOpNode;295;3541.436,-474.3668;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT4;0,0,0,0;False;1;FLOAT4;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;299;3024,-336;Inherit;True;2;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
+Node;AmplifyShaderEditor.FunctionNode;321;2835.453,-788.6148;Inherit;False;FolliageLighting;-1;;265;79c0e37f7bbbb5a48bca470660b2ffbf;0;1;17;COLOR;1,1,1,0;False;1;COLOR;0
+Node;AmplifyShaderEditor.RangedFloatNode;245;2208,-864;Inherit;False;Property;_Smoothness;Smoothness;4;0;Create;True;0;0;0;False;0;False;1;0.5;0;1;0;1;FLOAT;0
+Node;AmplifyShaderEditor.SimpleMultiplyOpNode;218;2112,-704;Inherit;False;2;2;0;COLOR;0,0,0,0;False;1;FLOAT3;0,0,0;False;1;COLOR;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;22;0,3;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;3;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ShadowCaster;0;2;ShadowCaster;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=ShadowCaster;False;False;0;Hidden/InternalErrorShader;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;20;0,3;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;3;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ExtraPrePass;0;0;ExtraPrePass;5;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;0;False;False;0;Hidden/InternalErrorShader;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;23;0,3;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;3;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthOnly;0;3;DepthOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;True;False;False;False;False;0;False;;False;False;False;False;False;False;False;False;False;True;1;False;;False;False;True;1;LightMode=DepthOnly;False;False;0;Hidden/InternalErrorShader;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;24;0,3;Float;False;False;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;3;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Meta;0;4;Meta;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Meta;False;False;0;Hidden/InternalErrorShader;0;0;Standard;0;False;0
-Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;21;3626.626,-756.2504;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;Shad_Leaves;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;9;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;2;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForward;False;False;0;Hidden/InternalErrorShader;0;0;Standard;25;Surface;0;0;  Blend;0;0;Two Sided;0;638527949307706314;Alpha Clipping;1;0;  Use Shadow Threshold;1;638773252473418036;Forward Only;0;0;Cast Shadows;1;0;Receive Shadows;1;638528850798868472;GPU Instancing;1;0;LOD CrossFade;0;0;Built-in Fog;0;638774792634575293;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Write Depth;0;0;  Early Z;0;0;Vertex Position,InvertActionOnDeselection;0;638528860966675641;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;271;3626.626,-706.2504;Float;False;False;-1;3;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;Universal2D;0;5;Universal2D;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;0;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=Universal2D;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;272;3626.626,-706.2504;Float;False;False;-1;3;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;SceneSelectionPass;0;6;SceneSelectionPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;2;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=SceneSelectionPass;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;273;3626.626,-706.2504;Float;False;False;-1;3;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;ScenePickingPass;0;7;ScenePickingPass;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;LightMode=Picking;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;274;3626.626,-706.2504;Float;False;False;-1;3;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormals;0;8;DepthNormals;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;False;0;;0;0;Standard;0;False;0
 Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;275;3626.626,-706.2504;Float;False;False;-1;3;UnityEditor.ShaderGraphUnlitGUI;0;1;New Amplify Shader;2992e84f91cbeb14eab234972e07ea9d;True;DepthNormalsOnly;0;9;DepthNormalsOnly;0;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;0;False;;False;False;False;False;False;False;False;False;False;True;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;1;False;;True;3;False;;False;True;1;LightMode=DepthNormalsOnly;False;True;9;d3d11;metal;vulkan;xboxone;xboxseries;playstation;ps4;ps5;switch;0;;0;0;Standard;0;False;0
+Node;AmplifyShaderEditor.TemplateMultiPassMasterNode;21;3744,-784;Float;False;True;-1;2;UnityEditor.ShaderGraphUnlitGUI;0;13;Shad_Leaves;2992e84f91cbeb14eab234972e07ea9d;True;Forward;0;1;Forward;9;False;False;False;False;False;False;False;False;False;False;False;False;True;0;False;;False;True;2;False;;False;False;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;False;False;False;True;4;RenderPipeline=UniversalPipeline;RenderType=Opaque=RenderType;Queue=Geometry=Queue=0;UniversalMaterialType=Unlit;True;5;True;12;all;0;False;True;1;1;False;;0;False;;1;1;False;;0;False;;False;False;False;False;False;False;False;False;False;False;False;False;False;False;True;True;True;True;True;0;False;;False;False;False;False;False;False;False;True;False;255;False;;255;False;;255;False;;7;False;;1;False;;1;False;;1;False;;7;False;;1;False;;1;False;;1;False;;False;True;1;False;;True;3;False;;True;True;0;False;;0;False;;True;1;LightMode=UniversalForward;False;False;0;Hidden/InternalErrorShader;0;0;Standard;25;Surface;0;0;  Blend;0;0;Two Sided;0;638527949307706314;Alpha Clipping;1;0;  Use Shadow Threshold;1;638773252473418036;Forward Only;0;0;Cast Shadows;1;0;Receive Shadows;1;638528850798868472;GPU Instancing;1;0;LOD CrossFade;0;0;Built-in Fog;0;638774792634575293;Meta Pass;0;0;Extra Pre Pass;0;0;Tessellation;0;0;  Phong;0;0;  Strength;0.5,False,;0;  Type;0;0;  Tess;16,False,;0;  Min;10,False,;0;  Max;25,False,;0;  Edge Length;16,False,;0;  Max Displacement;25,False,;0;Write Depth;0;0;  Early Z;0;0;Vertex Position,InvertActionOnDeselection;0;638528860966675641;0;10;False;True;True;True;False;False;True;True;True;False;False;;False;0
+WireConnection;285;0;284;0
+WireConnection;294;0;285;0
+WireConnection;305;0;294;0
+WireConnection;305;1;304;0
+WireConnection;302;0;305;0
+WireConnection;302;1;303;0
+WireConnection;306;0;302;0
 WireConnection;182;0;89;4
-WireConnection;241;1;282;0
-WireConnection;218;0;8;0
-WireConnection;218;1;234;0
-WireConnection;282;17;218;0
+WireConnection;310;0;311;0
+WireConnection;310;1;306;0
+WireConnection;241;1;321;0
 WireConnection;234;2;89;0
 WireConnection;234;3;244;0
+WireConnection;295;0;310;0
+WireConnection;295;1;215;0
+WireConnection;299;0;294;0
+WireConnection;321;17;218;0
+WireConnection;218;0;8;0
+WireConnection;218;1;234;0
 WireConnection;21;2;241;0
 WireConnection;21;3;180;0
 WireConnection;21;4;178;0
-WireConnection;21;5;215;0
+WireConnection;21;5;295;0
 ASEEND*/
-//CHKSM=3558DF16F8E84ACCAC20981E92C4DD5CBE7A03EB
+//CHKSM=859E48FEB0B5079D63923929CF7DDE57D72437A4

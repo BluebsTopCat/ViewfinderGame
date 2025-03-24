@@ -121,7 +121,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _TexTop:
         m_Texture: {fileID: 2800000, guid: b4d90923b71a43f41a1bce81184b9753, type: 3}
-        m_Scale: {x: 1, y: 1}
+        m_Scale: {x: 5, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Tex_Bot:
         m_Texture: {fileID: 2800000, guid: c0b2ee3230283dc46b9b862c4d79909f, type: 3}
